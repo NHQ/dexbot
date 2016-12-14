@@ -1,18 +1,15 @@
 var secretStack = require('secret-stack')
 var keys = require('./keys.json')
-var appkey = require('./appkeys.json')
 var muxrpc = require('muxrpc')
 var ms = require('multiserver')
 var mdns = require('bonjour')()
 
 var createApp = secretStack({
-  appKey: appkey.private
+  appKey: new Buffer('00000000000000000000000000000000')
 }).use({
   name: 'spot',
   manifest: {
-    public: {
-      greet: 'async'
-    }
+    greet: 'async'
   },
   permissions: {
     anonymous: ['public.greet']
@@ -45,7 +42,7 @@ mdns.find({type: 'spot'}, function(service){
   else{
     node.connect(service.host, function(err, rpc){
       console.log(err, rpc)
-      rpc.public.greet(function(err, greets){
+      rpc.spot.greet(function(greets){
         console.log(greets)
       })
     })
