@@ -1,7 +1,7 @@
 {
   "name": "spot",
   "version": "1.0.0",
-  "description": "",
+  "description": "this lib needed for avahi for node module mdns: `libavahi-compat-libdnssd-dev`",
   "main": "index.js",
   "scripts": {
     "keygen": "node -pe 'JSON.stringify(require(\"ssb-keys\").generate())' > keys.json",
@@ -9,5 +9,15 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "bonjour": "^3.5.0",
+    "secret-stack": "^3.2.0",
+    "ssb-keys": "^7.0.3"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "ssb://%syzdcFcK6FZMxOKo1P1j6onbfe/LWPTWhbI1z3hDxZ4=.sha256"
+  }
 }
