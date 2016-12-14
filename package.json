@@ -1,0 +1,13 @@
+{
+  "name": "spot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "keygen": "node -pe 'JSON.stringify(require(\"ssb-keys\").generate())' > keys.json",
+    "appkeygen": "node -pe 'JSON.stringify(require(\"ssb-keys\").generate())' > appkeys.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
