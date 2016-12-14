@@ -16,7 +16,7 @@ var createApp = secretStack({
   },
   init: function(api, opts){
     return {
-      'public.greet': function(arg, cb){
+      'greet': function(cb){
         cb(null, 'GREETINGS')
       }
     }
@@ -42,7 +42,7 @@ mdns.find({type: 'spot'}, function(service){
   else{
     node.connect(service.host, function(err, rpc){
       console.log(err, rpc)
-      rpc.spot.greet(function(greets){
+      rpc.spot.greet(function(err, greets){
         console.log(greets)
       })
     })
