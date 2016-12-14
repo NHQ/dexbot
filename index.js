@@ -42,7 +42,7 @@ var browser = mdns.createBrowser(mdns.tcp('http'), 11111)
 browser.on('serviceUp', function(service){
   console.log(service.txtRecord.address)
   node.connect(service.txtRecord.address.split('~')[0], function(rpc){
-    rpc.public.greeting(function(err, greets){
+    rpc.public.greet(function(err, greets){
       console.log(greets)
     })
   })
