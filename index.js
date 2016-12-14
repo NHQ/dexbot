@@ -3,6 +3,7 @@ var keys = require('./keys.json')
 var appkey = require('./appkeys.json')
 var muxrpc = require('muxrpc')
 var ms = require('multiserver')
+var mdns = require('mdns')
 
 var createApp = secretStack({
   appKey: appkey.private
@@ -28,5 +29,19 @@ var createApp = secretStack({
 var node = createApp({
   keys: keys
 })
+
+var record = {
+  name: process.argv[3] || 'poopface',
+  address: node.getAddress()
+}
+
+var ad = mdns.createAdvertisement(mdns.tcp('http'), 11111, {txtRecord: record})
+ad.start()
+
+var browser = mdns.createBrowser(mdns.tcp('http'), 11111)
+browser.on('serviceUp', function(service){
+  console.log(service.txtRecord.address)
+})
+
 
 console.log(node.getAddress())
