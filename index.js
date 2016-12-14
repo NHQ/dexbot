@@ -3,7 +3,7 @@ var keys = require('./keys.json')
 var appkey = require('./appkeys.json')
 var muxrpc = require('muxrpc')
 var ms = require('multiserver')
-var mdns = require('mdns')
+var mdns = require('bonjour')()
 
 var createApp = secretStack({
   appKey: appkey.private
@@ -31,22 +31,25 @@ var node = createApp({
 })
 
 var record = {
-  name: process.argv[3] || 'poopface',
-  address: node.getAddress()
+  type: 'spot',
+  port: 12111,
+  name: process.argv[2],
+  host: node.getAddress()
 }
 
-var ad = mdns.createAdvertisement(mdns.tcp('http'), 11111, {txtRecord: record})
-ad.start()
+mdns.publish(record)
 
-var browser = mdns.createBrowser(mdns.tcp('http'), 11111)
-browser.on('serviceUp', function(service){
-  console.log(service.txtRecord.address)
-  node.connect(service.txtRecord.address.split('~')[0], function(rpc){
-    rpc.public.greet(function(err, greets){
-      console.log(greets)
+mdns.find({type: 'spot'}, function(service){
+  console.log(service)
+  if(service.host === node.getAddress()) return
+  else{
+    node.connect(service.host, function(err, rpc){
+      console.log(err, rpc)
+      rpc.public.greet(function(err, greets){
+        console.log(greets)
+      })
     })
-  })
+  }
 })
-
 
 console.log(node.getAddress())
