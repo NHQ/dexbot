@@ -1,5 +1,8 @@
-var mdns = require('bonjour')()
-var dnsdisco = require('dns-discovery')
+//var mdns = require('bonjour')()
+// var dnsdisco = require('dns-discovery') 
+// both error if no network intergace connection
+
+
 
 var keer = require('ssb-keys')
 var hyperlog = require('hyperlog')
@@ -50,27 +53,28 @@ $.permissions = {
 $.init = function(dex, bot){
   var self = dex
   var node = dex
-  var rpc = {}
+  var rpc = {replicate: {}, log: {}}
   $.permissions.replicate.forEach(function(e){
-    rpc[e] = function(opts){
+    rpc.replicate[e] = function(opts){
+      opts = opts || {}
       var type  = $.manifest.replicate[e]
-      var log = bot.log[e]({mode: e, live: opts.live || false})
+      var log = bot.log.replicate({mode: e, live: opts.live || false})
       var stream = str2ps[type](log)
       return stream
     }
   })
   $.permissions.log.forEach(function(e){
     var type = $.manifest[e]
-    if(type === 'async') rpc[e] = bot.log[e]
+    if(type === 'async') rpc.log[e] = bot.log[e]
     else{ // source stream
       switch(e){
         case 'headStream':
-          rpc[e] = function(opts){
+          rpc.log[e] = function(opts){
             return str2ps(bot.log.heads(opts))
           }
         break;
         case 'updates':
-          rpc[e] = function(opts){
+          rpc.log[e] = function(opts){
             return str2ps(bot.log.createReadStream(opts))
           }
         break;
@@ -113,6 +117,7 @@ $.init = function(dex, bot){
           node.connect(peer.host, function(err, rpc){
             if(err) console.log(err) // publish errloggify this callback if the method sticks
             if(cb) cb(rpc)
+            /*
             rpc.manifest(function(err, data){
       //        console.log(err, data)
             })
@@ -135,6 +140,7 @@ $.init = function(dex, bot){
             log.on('add', function(data){
               //console.log(data.value.toString() + service.name)
             })
+            */
           })  
     
     },
@@ -188,15 +194,10 @@ $.init = function(dex, bot){
     },
     'createLog': function(name){
       var log = hyperlog(bot.db.sublevel(name))
-      
-      var stream = str2ps.duplex(log.replicate({live:true}), function(err){
+      log.on('add', function(node){ console.log(node.value.toString())}) 
+      var stream = str2ps.duplex(log.replicate({live:true, mode:'sync'}), function(err){
         //console.log('remote error or completion?', err)
       })
-      setInterval(function(){ 
-        log.add(null, '"' + Math.random().toString(2) + '" - ' + bot.name, function(err, msg){
-          if(err) console.log(err)
-        })
-      },511)
       return stream 
     },
     'greeting': function(name, cb){

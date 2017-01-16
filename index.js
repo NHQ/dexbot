@@ -49,6 +49,7 @@ module.exports = function(bot){
   })
   //console.log(node, node.address())
   bot.do = {}
+  bot.host = node.address()
   node.auth.hook(function(auth, args){
     var bot = args[0]
     var cb = args[1]
