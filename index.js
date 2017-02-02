@@ -3,6 +3,7 @@ var sublevel = require('level-sublevel')
 var hyperlog = require('hyperlog')
 var swarmlog = require('swarmlog')
 
+var util = require('./util')
 var pull = require('pull-stream')
 var str2ps = require('stream-to-pull-stream')
 
@@ -37,28 +38,34 @@ module.exports = function(bot){
     }
   }).use(require('./core/'))
   //.use(ws)
-
+ 
+  var logs = {}
   node = createApp({
     keys: keys,
     errLogDB: errLogDB,
     errLogger: errLog,
     log: bot.log,
+    logs: logs,
     db: memdb,
     self: bot,
     name: bot.name
   })
   //console.log(node, node.address())
+  bot.address = util.parseAddress(node.address())
   bot.do = {}
+  bot.logs = logs
   bot.host = node.address()
   node.auth.hook(function(auth, args){
     var bot = args[0]
     var cb = args[1]
+    //console.log(bot)
     auth(bot, function(err, perms){
       //console.log(perms)
       cb(null, {'sign':true, 'log': true})
     })
   })
   Object.assign(bot.do, node.dexbot)
+  bot.on = node.on
 
   return bot
 
