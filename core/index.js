@@ -25,6 +25,7 @@ $.name = 'dexbot'
 $.manifest = {
     rc: 'duplex',
     callback: 'duplex',
+    emit: 'async',
     assimilate: 'duplex',
     greet: 'async',
     createLog: 'duplex',
@@ -54,6 +55,7 @@ $.manifest = {
 }
 
 $.permissions = {
+  uxer : ['emit'],
   anonymous: ['rc', 'assimilate', 'callback', 'greet', 'bonjour', 'connect', 'createLog', 'getLog', 'netcast', 'greeting'],
   replicate: ['push', 'pull', 'sync'],
   log : ['add', 'append', 'batch', 'get', 'heads', 'headStream', 'updates'], 
@@ -103,16 +105,22 @@ $.init = function(dex, bot){
        }
        else cb(null, false)
     },
+    'emit' : function(channel, data, cb){
+      dex.emit(channel, data)
+      if(cb) cb(null, true)
+    },
     'callback' : function(id){
       var em = new emitter
       var st = emStream(em)
       var dupe = toPull.duplex(st)
+      var rst = emStream(st)
       dex.on('to:' + id, function(data){
+        console.log(data)
         em.emit('to:' + id, {from: bot.keys.id, msg: data})
       }) 
-      var rst = emStream(st)
 
       rst.on('to:'+bot.keys.id,function(data){
+        dex.emit('to:'+bot.keys.id, data)
         console.log(data)
       })
       return dupe
@@ -164,19 +172,20 @@ $.init = function(dex, bot){
             var local = server.createStream()
             pull(rc, local, rc)
 */
-            // set up messaging
+            // set up two way messaging
             var pst = rpc.dexbot.callback(bot.keys.id)
             var dupe = emStream(toStream(pst))
-             
+            
             var rdupe = emStream(dupe)
-            var tp = toPull(rdupe)
+            var tp = toPull.duplex(rdupe)
 
-            pull(tp, pst, tp)
-            setInterval(function(){
-            rdupe.emit('to:'+rpc.id, {from: bot.keys.id, msg: "salt"})
-            }, 1000)
+            pull(pst, tp, pst)
+
+            dex.on('to:'+rpc.id, function(data){
+              dupe.emit('to:'+rpc.id, {from: bot.keys.id, msg: data})
+            })
+
             dupe.on('to:'+bot.keys.id, function(data){
-              
               dex.emit('to:'+bot.keys.id, data)
             })
 

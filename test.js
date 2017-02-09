@@ -60,6 +60,7 @@ setInterval(function(){
  var msg = `helloworld, it's ${(Math.ceil(Date.now() * Math.random()))} fast 0'clock.` 
  //console.log(msg)
  person.log.add([], msg, function(err, ok){ 
+ person.do.emit('to:'+friend.keys.id, "YOU MAD")
 })}, 3000)
 
 

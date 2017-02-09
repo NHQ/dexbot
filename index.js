@@ -66,7 +66,7 @@ module.exports = function(bot){
   })
   Object.assign(bot.do, node.dexbot)
   bot.on = node.on
-
+  bot.emit = node.emit
   return bot
 
 }
