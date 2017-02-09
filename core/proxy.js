@@ -1,21 +1,35 @@
 var net = require('net')
 var bind = require('tcp-bind')
+var keys =  require('ssb-keys')
+var ref = require('jssb-ref')
 
 var answer = require('answerver')
 
 module.exports.name = 'proxy'
 module.exports.version = '0.0.0'
-module.exports.init = function(rpc, bot){
-  rpc.on('remote:authorized', function(remote, res){
+module.exports.init = function(dex, bot){
   
+  dex.on('to:'+bot.keys.id, function(data){
+    if(data.type === 'proxy'){ // :\
+      var id = data.from
+      var service = data.service // walking it out...
+      // wat
+      if(service === 'start'){
+        dex.dexbot.createSearver({host: data.host , port: data.port}, function(err, addr){
+          console.log(err, addr)
+        })
+      }
+    }
   })
+
   return {
     createServer: function(op, cb){
       var server = new net.Server 
       var pkey = op.key // the requestor of this service
 
       server.on('connection', function(socket){
-      
+        // pipe this socket directly to a bot's next socket
+        var link = ref.hasFeed(socket.remoteAddress)
       })
       server.listen(op.port, function(err){
         cb(err, server.address())
@@ -39,7 +53,7 @@ module.exports.init = function(rpc, bot){
         console.log(err)
       })
 
-      remoteSocket.on('connection', function(remoteStream){
+      remoteSocket.on('connect', function(){
 
         var localSocket = Socket()
 
@@ -49,9 +63,9 @@ module.exports.init = function(rpc, bot){
           console.log(err)
         })
 
-        localSocket.on('connection', function(stream){
+        localSocket.on('connect', function(){
 
-          stream.pipe(remoteStream, {end: false}).pipe(stream, {end: false})
+          localSocket.pipe(remoteSocket {end: false}).pipe(localSocket, {end: false})
             
         })
           
@@ -97,4 +111,3 @@ module.exports.server = function(farout, homie){
 // one to the server, and one to the local bot itself
 // the rpc will have all the connection details (ie port)
 
-module.exports.proxy = 

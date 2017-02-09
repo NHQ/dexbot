@@ -26,7 +26,6 @@ $.manifest = {
     rc: 'duplex',
     callback: 'duplex',
     assimilate: 'duplex',
-    onConnect: 'async',
     greet: 'async',
     createLog: 'duplex',
     getLog: 'source',
@@ -55,7 +54,7 @@ $.manifest = {
 }
 
 $.permissions = {
-  anonymous: ['rc', 'assimilate', 'callback', 'greet', 'bonjour', 'connect', 'createLog', 'getLog', 'netcast', 'greeting', 'onConnect'],
+  anonymous: ['rc', 'assimilate', 'callback', 'greet', 'bonjour', 'connect', 'createLog', 'getLog', 'netcast', 'greeting'],
   replicate: ['push', 'pull', 'sync'],
   log : ['add', 'append', 'batch', 'get', 'heads', 'headStream', 'updates'], 
   sign: ['sign', 'onConnect'],
@@ -97,32 +96,30 @@ $.init = function(dex, bot){
     }
   })
   var core = {
+    'call' : function(msg, cb){
+       if(msg.to){
+         dex.emit('to:'+msg.to, msg.data)
+         if(cb) cb(null, true)
+       }
+       else cb(null, false)
+    },
     'callback' : function(id){
       var em = new emitter
       var st = emStream(em)
       var dupe = toPull.duplex(st)
       dex.on('to:' + id, function(data){
-        em.emit('to:' + id, {from: bot.keys.public, msg: data})
+        em.emit('to:' + id, {from: bot.keys.id, msg: data})
       }) 
-      //dex.emit('to:'+ id, 'HOLLA!')   
+      var rst = emStream(st)
+
+      rst.on('to:'+bot.keys.id,function(data){
+        console.log(data)
+      })
       return dupe
     },
     'sign': function(msg, cb){
       var signed = keer.signObj(bot.keys, {msg: msg})
       cb(null, signed)
-    },
-    'onConnect' : function(cb){
-      var self = dex
-      dex.on('rpc:connect', function(remote){
-        //remote.pause()
-        node.auth.hook(function(args, _cb){
-          console.log(args)
-          _cb()
-        })
-        cb(remote)
-      }) 
-
- 
     },
     'bonjour': function(){
     //console.log(bot)
@@ -147,27 +144,40 @@ $.init = function(dex, bot){
     },
     'rc': function(id){
       var client = muxrpc(dex.getManifest(), {})()
-      setInterval(function(){
-        client.dexbot.sign('muh', function(err, str){
-          console.log(err, str)
-        })
-      },1111)
-      return client.createStream()
+      peers[id] = client
+      var stream = client.createStream()
+      var dupe = client.dexbot.callback(bot.keys.id)
+      dex.on('to:'+bot.keys.id, function(data){
+        dupe.emit('to:'+bot.keys.id, data)
+      })
+
+      return stream
     },
     'connect': function(peer, cb){
           node.connect(peer.host, function(err, rpc){
             if(err) console.log(err) // publish errloggify this callback if the method sticks
-            if(cb) cb(rpc)
+            if(cb) cb(null, rpc)
             // give peer yr rpc
+/*
             var server = muxrpc({}, dex.getManifest())(dex)
-            var rc = rpc.dexbot.rc(bot.keys.public)
+            var rc = rpc.dexbot.rc(bot.keys.id)
             var local = server.createStream()
             pull(rc, local, rc)
+*/
             // set up messaging
-            var dupe = emStream(toStream(rpc.dexbot.callback(bot.keys.public)))
-            dupe.on('to:'+bot.keys.public, function(data){
-              dex.emit('to:'+bot.keys.public, data)
-              console.log(data)
+            var pst = rpc.dexbot.callback(bot.keys.id)
+            var dupe = emStream(toStream(pst))
+             
+            var rdupe = emStream(dupe)
+            var tp = toPull(rdupe)
+
+            pull(tp, pst, tp)
+            setInterval(function(){
+            rdupe.emit('to:'+rpc.id, {from: bot.keys.id, msg: "salt"})
+            }, 1000)
+            dupe.on('to:'+bot.keys.id, function(data){
+              
+              dex.emit('to:'+bot.keys.id, data)
             })
 
 

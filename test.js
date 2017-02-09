@@ -8,12 +8,12 @@ var emStream = require('emit-stream')
 var person = spawnBot()
 var friend = spawnBot()
 
-console.log(friend.address)
+console.log(friend.keys)
 friend.on('rpc:connect', function(whom){
   console.log(whom)
 })
 
-friend.do.connect(person, function(peer){
+friend.do.connect(person, function(err, peer){
 
   var rs = peer.dexbot.replicate.sync({live: true}, function(err){
     //console.log('*************************\n', err)
