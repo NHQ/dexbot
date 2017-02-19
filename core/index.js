@@ -20,7 +20,9 @@ var hldex = require('hyperlog-index')
 
 var $ = module.exports = {}
 
-$.name = 'dexbot'
+$.name = 'dexbot' // change to 'rpc'
+
+// dexbot is a *SUPA!!!*
 
 $.manifest = {
     rc: 'duplex',
@@ -56,7 +58,7 @@ $.manifest = {
 
 $.permissions = {
   uxer : ['emit'],
-  anonymous: ['rc', 'assimilate', 'callback', 'greet', 'bonjour', 'connect', 'createLog', 'getLog', 'netcast', 'greeting'],
+  anonymous: ['rc', 'assimilate', 'callback', 'connect', 'createLog', 'getLog', 'netcast'],
   replicate: ['push', 'pull', 'sync'],
   log : ['add', 'append', 'batch', 'get', 'heads', 'headStream', 'updates'], 
   sign: ['sign', 'onConnect'],
@@ -68,11 +70,18 @@ $.init = function(dex, bot){
   var node = dex
   var rpc = {replicate: {}, log: {}}
   var logs = bot.logs
+  var peers = {}
+  var kv = hyperkv({
+    db: bot.db,
+    log: hyperlog(bot.db.sublevel('kvi:' + dex.id))
+  })
+  
   $.permissions.replicate.forEach(function(e){
     rpc.replicate[e] = function(opts){
       opts = opts || {}
+      var id = opts.id
       var type  = $.manifest.replicate[e]
-      var log = bot.log.replicate({mode: e, live: opts.live || false})
+      var log = logs[id] || bot.log.replicate({mode: e, live: opts.live || false})
       var stream = str2ps[type](log, function(err){
         console.log(err)
       })
@@ -98,13 +107,6 @@ $.init = function(dex, bot){
     }
   })
   var core = {
-    'call' : function(msg, cb){
-       if(msg.to){
-         dex.emit('to:'+msg.to, msg.data)
-         if(cb) cb(null, true)
-       }
-       else cb(null, false)
-    },
     'emit' : function(channel, data, cb){
       dex.emit(channel, data)
       if(cb) cb(null, true)
@@ -121,7 +123,7 @@ $.init = function(dex, bot){
 
       rst.on('to:'+bot.keys.id,function(data){
         dex.emit('to:'+bot.keys.id, data)
-        console.log(data)
+    //    console.log(data)
       })
       return dupe
     },
@@ -129,30 +131,9 @@ $.init = function(dex, bot){
       var signed = keer.signObj(bot.keys, {msg: msg})
       cb(null, signed)
     },
-    'bonjour': function(){
-    //console.log(bot)
-      var record = {
-        type: 'dexbot',
-        port: 12111, // fake cuz why port?  idk...  also, don't want to parse node.adress() for port #buh
-        // see one secret-stack to read address
-        name: bot.name,
-        host: node.getAddress()
-      }
-      mdns.publish(record)
-    
-    },
-    'greet': function(cb){
-      ;(function(_cb){mdns.find({type: 'dexbot'}, function(service){
-        if(service.host === node.getAddress()) return
-        else{ 
-          //console.log(service, _cb)
-          if(_cb) _cb(service)// add to list of known bots, loookup, etc
-        }
-      })})(cb)
-    },
     'rc': function(id){
       var client = muxrpc(dex.getManifest(), {})()
-      peers[id] = client
+      peers[id].client = client
       var stream = client.createStream()
       var dupe = client.dexbot.callback(bot.keys.id)
       dex.on('to:'+bot.keys.id, function(data){
@@ -164,6 +145,7 @@ $.init = function(dex, bot){
     'connect': function(peer, cb){
           node.connect(peer.host, function(err, rpc){
             if(err) console.log(err) // publish errloggify this callback if the method sticks
+            peers[rpc.id] = rpc
             if(cb) cb(null, rpc)
             // give peer yr rpc
 /*
@@ -188,34 +170,7 @@ $.init = function(dex, bot){
             dupe.on('to:'+bot.keys.id, function(data){
               dex.emit('to:'+bot.keys.id, data)
             })
-
-
-            /*
-            rpc.manifest(function(err, data){
-      //        console.log(err, data)
-            })
-            //rpc.dexbot.greet(self.name, function(err, greets){
-            //  console.log(greets)
-            //})
-            var log = hyperlog(bot.db.sublevel())
-            var local = str2ps.duplex(log.replicate({live : true}), function(err){
-              //console.log('local err or ending?', err)
-            })
-            var random = rpc.dexbot.createLog()
-            var remote = rpc.dexbot.netcast({
-              distance: 3,
-              head: null,
-              author: '1234567890'
-            })
-            var x 
-            //pull(local, remote, local)
-            pull(local, random, local)
-            log.on('add', function(data){
-              //console.log(data.value.toString() + service.name)
-            })
-            */
           })  
-    
     },
     'netcast': function(mesg){
       
@@ -280,9 +235,7 @@ $.init = function(dex, bot){
     'createLog': function(name){ // name will usually be a public key
       var log = logs[name] || hyperlog(bot.db.sublevel(name))
       logs[name] = log // put these in a hyperkv store, with updates to status: live (connected), last_known_whatabouts (previous replication)
-      // etc
 
-      //log.on('preadd', function(node){ console.log(node)}) 
       log.on('end', function(){
         logs[name] = null
       }) 
@@ -290,9 +243,6 @@ $.init = function(dex, bot){
         //console.log('remote error or completion?', err)
       })
       return stream 
-    },
-    'greeting': function(name, cb){
-      cb(null, bot.name + ': GREETINGS TO ' + name)
     }
   }
   Object.assign(rpc, core)

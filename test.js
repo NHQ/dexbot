@@ -8,7 +8,6 @@ var emStream = require('emit-stream')
 var person = spawnBot()
 var friend = spawnBot()
 
-console.log(friend.keys)
 friend.on('rpc:connect', function(whom){
   console.log(whom)
 })
@@ -31,7 +30,7 @@ friend.do.connect(person, function(err, peer){
 // treat all logs the same
 
   var srs = friend.do.createLog(person.keys.id) // cheatcode for id
-  var xrs = friend.do.assimilate(Math.random() + "") // cheatcode for id
+  //var xrs = friend.do.assimilate(Math.random() + "") // cheatcode for id
 
   ps(rs, srs, rs)
 
@@ -44,11 +43,13 @@ friend.do.connect(person, function(err, peer){
   //ps(hlog, ps.log())
 
 
+  // perhaps best "remote" way is toStream(pull), now a replication stream, and pipe it to the local, like normal
+
   // local bot way, get the hyperlog replication stream directly
   // note, should modify this to be a createReadStream, not replication?
   // or, make replicate{push,pull,sync} general
 
-  log = friend.logs[person.keys.id] // a replication stream
+  log = friend.logs[person.keys.id] // a replication stream, not!?
 
   log.on('add', function(data){
     console.log(data.value.toString())
@@ -60,7 +61,7 @@ setInterval(function(){
  var msg = `helloworld, it's ${(Math.ceil(Date.now() * Math.random()))} fast 0'clock.` 
  //console.log(msg)
  person.log.add([], msg, function(err, ok){ 
- person.do.emit('to:'+friend.keys.id, "YOU MAD")
+ person.do.emit('to:'+friend.keys.id, "YOU MAD NOW")
 })}, 3000)
 
 
