@@ -28,9 +28,9 @@ $.manifest = {
     rc: 'duplex',
     callback: 'duplex',
     emit: 'async',
-    assimilate: 'duplex',
+    assimilate: 'async',
     greet: 'async',
-    createLog: 'duplex',
+    createLog: 'async',
     getLog: 'source',
     requestPublicKey: 'async',
     netcast: 'duplex',
@@ -70,6 +70,7 @@ $.init = function(dex, bot){
   var node = dex
   var rpc = {replicate: {}, log: {}}
   var logs = bot.logs
+  bot.logs[bot.keys.id] = bot.log
   var peers = {}
   var kv = hkv({
     db: bot.db,
@@ -79,11 +80,12 @@ $.init = function(dex, bot){
     
   })  
   $.permissions.replicate.forEach(function(e){
-    rpc.replicate[e] = function(opts){
+    rpc.replicate[e] = function(id, opts){
       opts = opts || {}
-      var id = opts.id
       var type  = $.manifest.replicate[e]
-      var log = logs[id] || bot.log.replicate({mode: e, live: opts.live || false})
+      dex.dexbot.createLog(id)
+      var log = logs[id]
+      log = log.replicate({mode: e, live: opts.live})
       var stream = str2ps[type](log, function(err){
         console.log(err)
       })
@@ -229,23 +231,31 @@ $.init = function(dex, bot){
       //log.on('add', function(d){console.log(d)})
       return stream
     },
-    'assimilate': function(id, peer){
-      var log = dex.dexbot.createLog(id)
-      console.log(dex.peers)
-      dex.peers[peer]
-      return log
+    'assimilate': function(op, cb){
+      // default to assimilating self
+      op = op || {}
+      var id = op.id || bot.keys.id
+      var peer = op.peer || id
+      peer = peers[peer].rpc
+      dex.dexbot.createLog(id)
+      var local = dex.dexbot.replicate.sync(id, {live: op.live || true})
+      var remote = peer.dexbot.replicate.sync(id, {live: op.live || true})
+      pull(remote, local, remote)
+      if(cb) cb(null, true)
     },
-    'createLog': function(name){ // name will usually be a public key
-      var log = logs[name] || hyperlog(bot.db.sublevel(name))
-      logs[name] = log // put these in a hyperkv store, with updates to status: live (connected), last_known_whatabouts (previous replication)
+    'createLog': function(id, cb){ // will usually be a public key
+      var log = logs[id] || hyperlog(bot.db.sublevel(id))
+      logs[id] = log // put these in a hyperkv store, with updates to status: live (connected), last_known_whatabouts (previous replication)
 
       log.on('end', function(){
         logs[name] = null
       }) 
-      var stream = str2ps.duplex(log.replicate({live:true, mode:'sync'}), function(err){
+
+      if(cb) cb(null, true)
+      //var stream = str2ps.duplex(log.replicate({live:true, mode:'sync'}), function(err){
         //console.log('remote error or completion?', err)
-      })
-      return stream 
+      //})
+      //return stream 
     }
   }
   Object.assign(rpc, core)

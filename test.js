@@ -14,54 +14,23 @@ friend.on('rpc:connect', function(whom){
 
 friend.do.connect(person, function(err, peer){
 
-  var rs = peer.dexbot.replicate.sync({live: true}, function(err){
-    //console.log('*************************\n', err)
-  })
-/*  // this was added to dexbot.connect 
-  var dupe = emStream(toStream(peer.dexbot.callback(friend.keys.public)))
+  friend.do.assimilate({id: person.keys.id}) // cheatcode for id
 
-  dupe.on('to:'+friend.keys.public, function(data){
-    console.log(data)
-  })
-*/
-
-// this should become part of replicate
-// mkdirp a log per public key
-// treat all logs the same
-
-  var srs = friend.do.createLog(person.keys.id) // cheatcode for id
-  //var xrs = friend.do.assimilate(Math.random() + "") // cheatcode for id
-
-  ps(rs, srs, rs)
-
-
-  // one way, get a rpc log, toStream it and listen to data events
-  var hlog = friend.do.getLog(person.keys.id)
-  var log = toStream.source(hlog)
-
-  // another way, but the same, listen for the rpc pull stream drain events or use the following flow
-  //ps(hlog, ps.log())
-
-
-  // perhaps best "remote" way is toStream(pull), now a replication stream, and pipe it to the local, like normal
-
-  // local bot way, get the hyperlog replication stream directly
-  // note, should modify this to be a createReadStream, not replication?
-  // or, make replicate{push,pull,sync} general
-
-  log = friend.logs[person.keys.id] // a replication stream, not!?
-
+  // grab local copy of that hyperlog and listen to add events from remote
+  log = friend.logs[person.keys.id] 
   log.on('add', function(data){
     console.log(data.value.toString())
   })
 
 })
 
+// remote (person) adding stuff
+// also remote rpc messages to local (friend) 
+
 setInterval(function(){
- var msg = `helloworld, it's ${(Math.ceil(Date.now() * Math.random()))} fast 0'clock.` 
- //console.log(msg)
+ var msg = `Helloworld, it is currently 3.${(Math.ceil(Date.now() * Math.random()))} Hz 0'clock.` 
  person.log.add([], msg, function(err, ok){ 
- person.do.emit('to:'+friend.keys.id, "YOU MAD NOW")
+ person.do.emit('to:'+friend.keys.id, "PHONE HOME")
 })}, 3000)
 
 
