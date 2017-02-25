@@ -14,7 +14,7 @@ var muxrpc = require('muxrpc')
 var emStream = require('emit-stream')
 var emitter = require('events').EventEmitter
 
-var hlkv = require('hyperkv')
+var hkv = require('hyperkv')
 var hldex = require('hyperlog-index')
 
 
@@ -71,11 +71,13 @@ $.init = function(dex, bot){
   var rpc = {replicate: {}, log: {}}
   var logs = bot.logs
   var peers = {}
-  var kv = hyperkv({
+  var kv = hkv({
     db: bot.db,
     log: hyperlog(bot.db.sublevel('kvi:' + dex.id))
   })
-  
+  kv.get(dex.id + ':logs', function(err, data){
+    
+  })  
   $.permissions.replicate.forEach(function(e){
     rpc.replicate[e] = function(opts){
       opts = opts || {}
@@ -145,8 +147,9 @@ $.init = function(dex, bot){
     'connect': function(peer, cb){
           node.connect(peer.host, function(err, rpc){
             if(err) console.log(err) // publish errloggify this callback if the method sticks
-            peers[rpc.id] = rpc
+            peers[rpc.id] = {rpc: rpc, id: rpc.id, known_hosts: [peer.address]}
             if(cb) cb(null, rpc)
+
             // give peer yr rpc
 /*
             var server = muxrpc({}, dex.getManifest())(dex)
