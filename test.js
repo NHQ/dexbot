@@ -21,7 +21,10 @@ friend.do.connect(person, function(err, peer){
   log.on('add', function(data){
     console.log(data.value.toString())
   })
+})
 
+friend.on(person.keys.id, function(data){
+  console.log(data)
 })
 
 // remote (person) adding stuff
@@ -29,8 +32,8 @@ friend.do.connect(person, function(err, peer){
 
 setInterval(function(){
  var msg = `Helloworld, it is currently 3.${(Math.ceil(Date.now() * Math.random()))} Hz 0'clock.` 
- person.log.add([], msg, function(err, ok){ 
- person.do.emit('to:'+friend.keys.id, "PHONE HOME")
+ person.do.hyperlog.add([], msg, function(err, ok){ 
+ person.do.emit('to:' + friend.keys.id, "PHONE HOME")
 })}, 3000)
 
 

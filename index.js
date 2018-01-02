@@ -15,7 +15,7 @@ module.exports = function(bot){
   var self = bot //  u kno, u wrong!
   var memdb = bot.db // db.sublevel(...) 
   var keys = bot.keys 
-  bot.log = hyperlog(memdb.sublevel(bot.keys.id))
+  //bot.log = hyperlog(memdb.sublevel(bot.keys.id))
   var node
 
   var errLogDB = hyperlog(memdb.sublevel(bot.id + ':errLog'))
@@ -52,19 +52,11 @@ module.exports = function(bot){
   })
   //console.log(node, node.address())
   bot.address = util.parseAddress(node.address())
-  bot.do = {}
   bot.logs = logs
   bot.host = node.address()
-  node.auth.hook(function(auth, args){
-    var bot = args[0]
-    var cb = args[1]
-    //console.log(bot)
-    auth(bot, function(err, perms){
-      //console.log(perms)
-      cb(null, {'sign':true, 'log': true})
-    })
-  })
+  bot.do = {}
   Object.assign(bot.do, node.dexbot)
+  
   bot.on = node.on
   bot.emit = node.emit
   return bot

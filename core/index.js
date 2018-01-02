@@ -45,7 +45,7 @@ $.manifest = {
       'pull': 'source',
       'sync': 'duplex'
     },
-    log: {
+    hyperlog: {
       'updates' : 'source',
       'heads' : 'async',
       'headStream' : 'source',
@@ -60,7 +60,7 @@ $.permissions = {
   uxer : ['emit'],
   anonymous: ['rc', 'assimilate', 'callback', 'connect', 'createLog', 'getLog', 'netcast'],
   replicate: ['push', 'pull', 'sync'],
-  log : ['add', 'append', 'batch', 'get', 'heads', 'headStream', 'updates'], 
+  hyperlog : ['add', 'append', 'batch', 'get', 'heads', 'headStream', 'updates'], 
   sign: ['sign', 'onConnect'],
   require: ['require']
 }
@@ -68,7 +68,7 @@ $.permissions = {
 $.init = function(dex, bot){
   var self = dex
   var node = dex
-  var rpc = {replicate: {}, log: {}}
+  var rpc = {replicate: {}, hyperlog: {}}
   var logs = bot.logs
   bot.logs[bot.keys.id] = bot.log
   var peers = {}
@@ -79,6 +79,16 @@ $.init = function(dex, bot){
   kv.get(dex.id + ':logs', function(err, data){
     
   })  
+  node.auth.hook(function(auth, args){
+    var bot = args[0]
+    var cb = args[1]
+    //console.log(bot)
+    auth(bot, function(err, perms){
+      //console.log(perms)
+      cb(null, {'sign':true, 'log': true})
+    })
+  })
+
   $.permissions.replicate.forEach(function(e){
     rpc.replicate[e] = function(id, opts){
       opts = opts || {}
@@ -92,18 +102,20 @@ $.init = function(dex, bot){
       return stream
     }
   })
-  $.permissions.log.forEach(function(e){
-    var type = $.manifest[e]
-    if(type === 'async') rpc.log[e] = bot.log[e]
+  $.permissions.hyperlog.forEach(function(e){
+    var type = $.manifest.hyperlog[e]
+    if(type === 'async') rpc.hyperlog[e] = function(){
+      bot.log[e].apply(bot.log, arguments)//links, msg, cb)
+    }
     else{ // source stream
       switch(e){
         case 'headStream':
-          rpc.log[e] = function(opts){
+          rpc.hyperlog[e] = function(opts){
             return str2ps(bot.log.heads(opts))
           }
         break;
         case 'updates':
-          rpc.log[e] = function(opts){
+          rpc.hyperlog[e] = function(opts){
             return str2ps(bot.log.createReadStream(opts))
           }
         break;
@@ -120,13 +132,13 @@ $.init = function(dex, bot){
       var st = emStream(em)
       var dupe = toPull.duplex(st)
       var rst = emStream(st)
-      dex.on('to:' + id, function(data){
-        console.log(data)
-        em.emit('to:' + id, {from: bot.keys.id, msg: data})
+      dex.on('to:'+ id, function(data){
+    //    console.log(data)
+        em.emit('from:'+bot.keys.id, {from: bot.keys.id, to: id, msg: data})
       }) 
 
-      rst.on('to:'+bot.keys.id,function(data){
-        dex.emit('to:'+bot.keys.id, data)
+      rst.on('from:' + id, function(data){
+        dex.emit(id, data)
     //    console.log(data)
       })
       return dupe
@@ -166,14 +178,15 @@ $.init = function(dex, bot){
             var rdupe = emStream(dupe)
             var tp = toPull.duplex(rdupe)
 
-            pull(pst, tp, pst)
+//            pull(pst, tp, pst)
 
-            dex.on('to:'+rpc.id, function(data){
-              dupe.emit('to:'+rpc.id, {from: bot.keys.id, msg: data})
+            dex.on('to:' + rpc.id, function(data){
+              rdupe.emit('from:'+ bot.keys.id, {from: bot.keys.id, to: rpc.id, msg: data})
             })
 
-            dupe.on('to:'+bot.keys.id, function(data){
-              dex.emit('to:'+bot.keys.id, data)
+            dupe.on('from:' + rpc.id, function(data){
+              dex.dexbot.emit(bot.keys.id, data)
+              console.log(data)
             })
           })  
     },
@@ -200,7 +213,7 @@ $.init = function(dex, bot){
             remote = peer.dexbot.netcast(mesg)
             pull(local, remote, local)
             log.on('add', function(data){
-              console.log(data.toString())
+//              console.log(data.toString())
             })
           }
         })
